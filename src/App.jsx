@@ -2,17 +2,34 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import WorkerPortal from './components/WorkerPortal';
 import EmployerDashboard from './components/EmployerDashboard';
+import LoginPage from './components/LoginPage';
 import VoiceAssistantModal from './components/VoiceAssistantModal';
 import NotificationsPopover from './components/NotificationsPopover';
 import { translations, sectorConfigs } from './data/mockData';
 import { fairShiftDB } from './services/db';
-import { FastForward, RotateCcw, Mic, ShieldAlert, Sparkles, Check } from 'lucide-react';
+import { FastForward, RotateCcw, Sparkles } from 'lucide-react';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('worker'); // 'worker' | 'employer'
-  const [selectedSector, setSelectedSector] = useState('construction'); // 'construction' | 'campus'
+  // Authentication session state
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fairshift_auth_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [currentView, setCurrentView] = useState(() => {
+    return currentUser?.view || 'worker';
+  });
+  const [selectedSector, setSelectedSector] = useState(() => {
+    return currentUser?.sector || 'construction';
+  });
   const [currentLang, setCurrentLang] = useState('en'); // 'en' | 'hi' | 'ta'
-  const [currentRole, setCurrentRole] = useState('worker'); // 'worker' | 'supervisor' | 'hr' | 'admin'
+  const [currentRole, setCurrentRole] = useState(() => {
+    return currentUser?.role || 'worker';
+  });
 
   // DB State synchronization
   const [dbState, setDbState] = useState(() => fairShiftDB.getState());
@@ -35,8 +52,31 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  const sectorData = sectorConfigs[selectedSector];
+  const sectorData = sectorConfigs[selectedSector] || sectorConfigs.construction;
   const t = translations[currentLang] || translations.en;
+
+  // Handle successful login
+  const handleLoginSuccess = (userPayload) => {
+    setCurrentUser(userPayload);
+    setCurrentRole(userPayload.role || 'worker');
+    setCurrentView(userPayload.view || 'worker');
+    if (userPayload.sector) setSelectedSector(userPayload.sector);
+    try {
+      localStorage.setItem('fairshift_auth_user', JSON.stringify(userPayload));
+    } catch (e) {
+      console.warn('Could not save auth session to localStorage', e);
+    }
+  };
+
+  // Handle logout
+  const handleSignOut = () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem('fairshift_auth_user');
+    } catch (e) {
+      console.warn('Could not clear auth session from localStorage', e);
+    }
+  };
 
   // Current worker object
   const currentWorker = dbState.users.find(
@@ -50,7 +90,7 @@ export default function App() {
   // Active shift timer
   useEffect(() => {
     let interval = null;
-    if (isClockedIn) {
+    if (isClockedIn && currentUser) {
       interval = setInterval(() => {
         setShiftSeconds((prev) => prev + 1);
       }, 1000);
@@ -58,7 +98,7 @@ export default function App() {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isClockedIn]);
+  }, [isClockedIn, currentUser]);
 
   // Handle adding new grievance from worker view
   const handleAddGrievance = (newGrievance) => {
@@ -102,14 +142,9 @@ export default function App() {
   // 9-Step Demonstration Auto-Run Shortcut
   const handleRun9StepDemo = () => {
     setDemoBannerMessage('Running 9-Step End-to-End Workflow Demonstration...');
-
-    // 1. Clock in
     setIsClockedIn(true);
-
-    // 2. Fast forward to 8.5h to show overtime
     setShiftSeconds(8.5 * 3600);
 
-    // 3. Create sample voice report
     setTimeout(() => {
       const demoCase = fairShiftDB.submitCase({
         sector: selectedSector,
@@ -124,7 +159,6 @@ export default function App() {
         audioDuration: 14
       });
 
-      // 4. Assign and update
       setTimeout(() => {
         fairShiftDB.updateCaseStatus(
           demoCase.id,
@@ -133,7 +167,6 @@ export default function App() {
           'Safety Inspector Murugan'
         );
 
-        // 5. Resolve
         setTimeout(() => {
           fairShiftDB.updateCaseStatus(
             demoCase.id,
@@ -147,13 +180,24 @@ export default function App() {
     }, 800);
   };
 
+  // If not logged in, render LoginPage first!
+  if (!currentUser) {
+    return (
+      <LoginPage
+        onLoginSuccess={handleLoginSuccess}
+        currentLang={currentLang}
+        setCurrentLang={setCurrentLang}
+      />
+    );
+  }
+
   const pendingGrievancesCount = currentGrievances.filter((g) => g.status !== 'resolved').length;
   const fatigueAlertsCount = (dbState.fatigueAlerts || []).filter((w) => w.status === 'open').length;
   const unreadNotifsCount = (dbState.notifications || []).filter((n) => !n.read).length;
   const offlineQueueCount = (dbState.offlineQueue || []).length;
 
   return (
-    <div className="min-h-screen bg-[#F4F4F2] flex flex-col text-[#111111] antialiased selection:bg-[#FF4D2D] selection:text-white">
+    <div className="min-h-screen bg-[#F4F4F2] flex flex-col text-[#111111] antialiased selection:bg-[#D9381E] selection:text-white">
       {/* Top Persistent Navigation */}
       <Navbar
         currentView={currentView}
@@ -175,6 +219,8 @@ export default function App() {
         sectorData={sectorData}
         pendingGrievancesCount={pendingGrievancesCount}
         fatigueAlertsCount={fatigueAlertsCount}
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
       />
 
       {/* Demo Feedback Banner */}
@@ -187,48 +233,53 @@ export default function App() {
 
       {/* Quick Judge Simulation Bar */}
       <div className="bg-[#EDEDEA] border-b border-black/[0.05] py-2 px-4 text-xs">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-slate-600 font-mono text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D9381E]"></span>
-            <span className="font-bold text-black uppercase tracking-wider">Evaluation Demo Toolbar:</span>
-            <span>Sector: {sectorData.name}</span>
+            <span className="font-bold text-black uppercase tracking-wider">{t.evaluationToolbar}</span>
+            <span>{selectedSector === 'construction' ? t.construction : t.campus}</span>
             <span>•</span>
-            <span>Role: {currentRole.toUpperCase()}</span>
+            <span>{currentRole.toUpperCase()}</span>
+            <span>•</span>
+            <span className="text-slate-500">{currentUser.name}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleRun9StepDemo}
               title="Execute full end-to-end 9-step demonstration workflow"
               className="flex items-center gap-1.5 px-3 py-1 bg-[#D9381E] text-white hover:bg-[#B52810] text-[11px] font-bold rounded-full transition-colors shadow-xs"
             >
               <Sparkles className="w-3 h-3" />
-              <span>Auto-Run 9-Step Demo Workflow</span>
+              <span>{t.autoRunDemo}</span>
             </button>
 
             <button
+              type="button"
               onClick={handleFastForwardOvertime}
               title="Add 2 hours to test 1.5x Overtime & Fatigue Alerts"
               className="flex items-center gap-1 px-2.5 py-1 bg-black text-white hover:bg-slate-800 text-[11px] font-semibold rounded-full transition-colors"
             >
               <FastForward className="w-3 h-3 text-[#D9381E]" />
-              <span>+2h Overtime</span>
+              <span>{t.twoHourOt}</span>
             </button>
 
             <button
+              type="button"
               onClick={handleResetShift}
               title="Reset shift timer"
               className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium rounded-full border border-black/[0.08] transition-colors"
             >
               <RotateCcw className="w-3 h-3 text-slate-400" />
-              <span>Reset</span>
+              <span>{t.reset}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Viewport Content */}
-      <main className="flex-1 flex flex-col items-center">
+      {/* Main Viewport Content (Normal Spacious Desktop Layout for both Worker & Admin) */}
+      <main className="flex-1 flex flex-col items-center w-full">
         {currentView === 'worker' ? (
           <WorkerPortal
             sectorConfig={sectorData}
@@ -263,6 +314,7 @@ export default function App() {
         onClose={() => setIsVoiceModalOpen(false)}
         currentLang={currentLang}
         currentWorkerId={currentWorker.id}
+        t={t}
       />
 
       {/* Notifications Drawer */}
@@ -271,15 +323,16 @@ export default function App() {
         onClose={() => setIsNotifOpen(false)}
         notifications={dbState.notifications || []}
         currentUserId={currentWorker.id}
+        t={t}
       />
 
       {/* Clean Minimal Dot UI Footer */}
       <footer className="bg-[#EDEDEA] border-t border-black/[0.05] py-5 px-4 text-xs text-slate-500 font-mono">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#FF4D2D]"></span>
-            <span className="font-bold text-black">FairShift</span>
-            <span>• UN SDG 8 Decent Work & Economic Growth</span>
+            <span className="w-2 h-2 rounded-full bg-[#D9381E]"></span>
+            <span className="font-bold text-black">{t.appName}</span>
+            <span>• {t.sdgTitle}</span>
           </div>
 
           <div className="flex items-center gap-3 text-slate-500">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { fairShiftDB } from '../services/db';
 
-export default function WorkplacePulseModal({ isOpen, onClose, sector = 'construction' }) {
+export default function WorkplacePulseModal({ isOpen, onClose, sector = 'construction', t = {} }) {
   const [rating, setRating] = useState(4);
   const [category, setCategory] = useState('Facilities & Heat Stress');
   const [feedback, setFeedback] = useState('');
@@ -25,10 +25,15 @@ export default function WorkplacePulseModal({ isOpen, onClose, sector = 'constru
       <div className="bg-[#1A1A1A] text-white rounded-4xl max-w-sm w-full p-6 border border-white/10 shadow-2xl flex flex-col gap-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Anonymous Pulse</div>
-            <h3 className="font-bold text-sm text-white mt-0.5">Workplace Feedback</h3>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+              {t.pulse || 'Anonymous Pulse'}
+            </div>
+            <h3 className="font-bold text-sm text-white mt-0.5">
+              {t.pulseTitle || 'Workplace Feedback'}
+            </h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300"
           >
@@ -47,13 +52,13 @@ export default function WorkplacePulseModal({ isOpen, onClose, sector = 'constru
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-xs">
             <p className="text-[11px] text-slate-400">
-              How are working conditions, break facilities, and safety gear today?
+              {t.pulseSubtitle || 'How are working conditions, break facilities, and safety gear today?'}
             </p>
 
             {/* 1 to 5 Satisfaction Pill Selector */}
             <div>
               <label className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
-                Satisfaction Rating (1 = Poor, 5 = Excellent)
+                Satisfaction Rating (1 = Low, 5 = High)
               </label>
               <div className="grid grid-cols-5 gap-1.5">
                 {[1, 2, 3, 4, 5].map((val) => (
@@ -61,10 +66,10 @@ export default function WorkplacePulseModal({ isOpen, onClose, sector = 'constru
                     key={val}
                     type="button"
                     onClick={() => setRating(val)}
-                    className={`py-2 rounded-xl font-mono text-xs font-bold transition-all ${
+                    className={`py-2 rounded-xl font-mono font-bold text-xs transition-all ${
                       rating === val
-                        ? 'bg-[#FF4D2D] text-white'
-                        : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                        ? 'bg-[#D9381E] text-white shadow-xs'
+                        : 'bg-white/5 text-slate-300 hover:bg-white/10'
                     }`}
                   >
                     {val}
@@ -73,7 +78,6 @@ export default function WorkplacePulseModal({ isOpen, onClose, sector = 'constru
               </div>
             </div>
 
-            {/* Category */}
             <div>
               <label className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
                 Category
@@ -81,44 +85,34 @@ export default function WorkplacePulseModal({ isOpen, onClose, sector = 'constru
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[#222222] border border-white/10 rounded-xl p-2.5 text-white text-xs focus:outline-none"
+                className="w-full p-2.5 bg-white/5 border border-white/10 rounded-2xl text-white font-mono focus:outline-hidden focus:border-[#D9381E]"
               >
-                <option value="Facilities & Heat Stress">Facilities & Hydration (Heat Stress)</option>
-                <option value="Safety & Protective Equipment">Safety PPE & Gear Availability</option>
-                <option value="Overtime Fairness & Rest Intervals">Overtime Fairness & Rest Intervals</option>
-                <option value="Supervisor Support & Respect">Supervisor Support & Respect</option>
+                <option value="Facilities & Heat Stress" className="bg-[#1A1A1A]">Hydration & Break Facilities</option>
+                <option value="PPE & Equipment Quality" className="bg-[#1A1A1A]">PPE & Tool Ergonomics</option>
+                <option value="Wage Transparency" className="bg-[#1A1A1A]">Wage & Overtime Accuracy</option>
+                <option value="Supervisor Communication" className="bg-[#1A1A1A]">Workplace Culture & Dignity</option>
               </select>
             </div>
 
-            {/* Feedback text */}
             <div>
               <label className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
-                Comments (Optional)
+                Anonymous Comment (Optional)
               </label>
               <textarea
                 rows={2}
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Share any suggestion or issue..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-white placeholder-slate-500 focus:outline-none resize-none"
+                placeholder="Drinking water station restocked promptly today..."
+                className="w-full p-2.5 bg-white/5 border border-white/10 rounded-2xl text-white font-mono placeholder:text-slate-600 focus:outline-hidden focus:border-[#D9381E]"
               />
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-2.5 bg-white/10 text-white font-medium rounded-full hover:bg-white/15"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 py-2.5 bg-white text-black font-bold rounded-full hover:bg-slate-100"
-              >
-                Submit Pulse
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="mt-2 w-full py-2.5 rounded-full bg-[#D9381E] hover:bg-[#B52810] text-white font-mono font-bold text-xs uppercase tracking-wider transition-colors"
+            >
+              {t.submitPulseBtn || 'Submit Anonymous Pulse'}
+            </button>
           </form>
         )}
       </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Check, Bell, AlertTriangle, ShieldCheck, DollarSign } from 'lucide-react';
 import { fairShiftDB } from '../services/db';
 
-export default function NotificationsPopover({ isOpen, onClose, notifications = [], currentUserId }) {
+export default function NotificationsPopover({ isOpen, onClose, notifications = [], currentUserId, t = {} }) {
   if (!isOpen) return null;
 
   const userNotifications = notifications.filter((n) => !currentUserId || n.userId === currentUserId || n.userId === 'usr_sup1' || n.userId === 'usr_adm1');
@@ -21,10 +21,10 @@ export default function NotificationsPopover({ isOpen, onClose, notifications = 
       <div className="bg-[#1A1A1A] text-white rounded-4xl max-w-sm w-full p-5 border border-white/10 shadow-2xl flex flex-col gap-3 mt-12 animate-fade-in max-h-[80vh]">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#FF4D2D]"></span>
-            <h3 className="font-bold text-sm text-white">Notifications</h3>
+            <span className="w-2 h-2 rounded-full bg-[#D9381E]"></span>
+            <h3 className="font-bold text-sm text-white">{t.notifTitle || 'Notifications'}</h3>
             {unreadCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-[#FF4D2D] text-white text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-[#D9381E] text-white text-[10px] font-mono font-bold">
                 {unreadCount} unread
               </span>
             )}
@@ -33,13 +33,15 @@ export default function NotificationsPopover({ isOpen, onClose, notifications = 
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
               <button
+                type="button"
                 onClick={handleMarkAll}
                 className="text-[10px] font-mono text-slate-400 hover:text-white"
               >
-                Mark all read
+                {t.markAllRead || 'Mark all read'}
               </button>
             )}
             <button
+              type="button"
               onClick={onClose}
               className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300"
             >
@@ -61,18 +63,15 @@ export default function NotificationsPopover({ isOpen, onClose, notifications = 
                 onClick={() => handleItemClick(n.id)}
                 className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col gap-1 ${
                   n.read
-                    ? 'bg-white/5 border-white/5 opacity-75'
-                    : 'bg-white/10 border-[#FF4D2D]/30 shadow-xs'
+                    ? 'bg-white/5 border-white/5 opacity-70'
+                    : 'bg-white/10 border-[#D9381E]/40 shadow-xs'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-white text-xs">{n.title}</span>
-                  <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-400">
-                    <span>{n.timestamp}</span>
-                    {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#FF4D2D]"></span>}
-                  </div>
+                  <span className="font-bold text-white text-[11px]">{n.title}</span>
+                  <span className="text-[10px] font-mono text-slate-400">{n.timestamp}</span>
                 </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">{n.message}</p>
+                <p className="text-[11px] text-slate-300 leading-relaxed font-sans">{n.message}</p>
               </div>
             ))
           )}

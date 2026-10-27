@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, AlertCircle, Check } from 'lucide-react';
 import { fairShiftDB } from '../services/db';
 
-export default function DiscrepancyModal({ isOpen, onClose, attendanceRecord, workerId, onDiscrepancySubmitted }) {
+export default function DiscrepancyModal({ isOpen, onClose, attendanceRecord, workerId, onDiscrepancySubmitted, t = {} }) {
   const [claimedHours, setClaimedHours] = useState(
     attendanceRecord ? (attendanceRecord.hoursWorked + 1.0).toString() : '9.0'
   );
@@ -36,10 +36,15 @@ export default function DiscrepancyModal({ isOpen, onClose, attendanceRecord, wo
       <div className="bg-[#1A1A1A] text-white rounded-4xl max-w-sm w-full p-6 border border-white/10 shadow-2xl flex flex-col gap-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Payroll Fairness</div>
-            <h3 className="font-bold text-sm text-white mt-0.5">Report Attendance Discrepancy</h3>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+              {t.payrollComputation || 'Payroll Fairness'}
+            </div>
+            <h3 className="font-bold text-sm text-white mt-0.5">
+              {t.discrepancyModalTitle || 'Report Attendance Discrepancy'}
+            </h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300"
           >
@@ -58,54 +63,39 @@ export default function DiscrepancyModal({ isOpen, onClose, attendanceRecord, wo
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-xs">
             <div className="p-3 bg-white/5 rounded-2xl border border-white/5 flex justify-between items-center font-mono">
-              <span className="text-slate-400">Logged Record:</span>
-              <span className="font-bold text-white">
-                {attendanceRecord ? `${attendanceRecord.hoursWorked}h (${attendanceRecord.date})` : '6.8h Today'}
-              </span>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
-                Actual Hours Worked
-              </label>
+              <span className="text-slate-400">{t.expectedHours || 'Claimed Hours'}</span>
               <input
                 type="number"
-                step="0.25"
+                step="0.5"
                 value={claimedHours}
                 onChange={(e) => setClaimedHours(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-white font-mono focus:outline-none focus:border-white/30"
+                className="w-20 px-2 py-1 bg-black/40 border border-white/20 rounded-lg text-right font-bold text-white focus:outline-hidden focus:border-[#D9381E]"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
-                Reason / Location of Overtime
+              <label className="text-slate-400 font-mono text-[11px] block mb-1">
+                {t.reasonNotes || 'Explanation / Supervisor On-Site'}
               </label>
               <textarea
                 rows={3}
                 value={explanation}
                 onChange={(e) => setExplanation(e.target.value)}
-                placeholder="e.g. Concrete pour continued past 17:00; gate scanner was offline during exit..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-white/30 resize-none"
+                placeholder="Overtime concrete pour ran until 19:30 with Foreman Murugan..."
+                className="w-full p-2.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder:text-slate-600 focus:outline-hidden focus:border-[#D9381E]"
               />
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-2.5 bg-white/10 text-white font-medium rounded-full hover:bg-white/15"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!explanation.trim()}
-                className="flex-1 py-2.5 bg-[#FF4D2D] text-white font-bold rounded-full disabled:opacity-40 hover:bg-[#E84324]"
-              >
-                Submit Ticket
-              </button>
-            </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              {t.discrepancyDesc || 'Submitted claim locks into the tamper-evident audit ledger and alerts HR for mandatory reconciliation within 24 hours.'}
+            </p>
+
+            <button
+              type="submit"
+              className="mt-2 w-full py-2.5 rounded-full bg-[#D9381E] hover:bg-[#B52810] text-white font-mono font-bold text-xs uppercase tracking-wider transition-colors"
+            >
+              {t.submitDiscrepancy || 'Submit Discrepancy Claim'}
+            </button>
           </form>
         )}
       </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, ArrowRightLeft, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { fairShiftDB } from '../services/db';
 
-export default function ShiftSwapModal({ isOpen, onClose, currentWorker, sector = 'construction' }) {
+export default function ShiftSwapModal({ isOpen, onClose, currentWorker, sector = 'construction', t = {} }) {
   const [selectedTarget, setSelectedTarget] = useState('Sunil Sharma');
   const [proposedShift, setProposedShift] = useState('Evening Rigging (15:00 - 23:30) • Oct 29');
   const [reason, setReason] = useState('');
@@ -49,10 +49,15 @@ export default function ShiftSwapModal({ isOpen, onClose, currentWorker, sector 
       <div className="bg-[#1A1A1A] text-white rounded-4xl max-w-sm w-full p-6 border border-white/10 shadow-2xl flex flex-col gap-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">FairShift Swap</div>
-            <h3 className="font-bold text-sm text-white mt-0.5">Peer Shift Exchange</h3>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+              {t.swapTitle || 'FairShift Peer Swap'}
+            </div>
+            <h3 className="font-bold text-sm text-white mt-0.5">
+              {t.requestSwapBtn || 'Request Shift Trade'}
+            </h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300"
           >
@@ -63,104 +68,72 @@ export default function ShiftSwapModal({ isOpen, onClose, currentWorker, sector 
         {isSuccess ? (
           <div className="p-4 bg-emerald-950/80 border border-emerald-500/40 rounded-2xl flex flex-col items-center justify-center text-center gap-2">
             <Check className="w-8 h-8 text-emerald-400" />
-            <h4 className="font-bold text-sm text-white">Swap Request Submitted</h4>
-            <p className="text-xs text-slate-300">
-              Shift trade sent to site supervisor. Colleague skill verified. Awaiting supervisor approval.
+            <h4 className="font-bold text-sm text-white">Shift Swap Request Submitted</h4>
+            <p className="text-xs text-slate-300 font-mono">
+              Queued for supervisor review with automated fatigue turnaround check.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSwapSubmit} className="flex flex-col gap-3 text-xs">
-            {/* Current Shift */}
-            <div className="p-3 bg-white/5 rounded-2xl border border-white/5 flex flex-col gap-0.5 font-mono">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider">Your Assigned Shift:</span>
-              <span className="font-bold text-white text-xs">Morning Rigging (07:00 - 15:30) • Oct 29</span>
-            </div>
-
-            {/* Target Colleague Selector */}
             <div>
-              <label className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
-                Select Qualified Colleague
-              </label>
-              <div className="flex flex-col gap-1.5">
-                {eligibleColleagues.map((colleague) => (
-                  <button
-                    key={colleague.id}
-                    type="button"
-                    disabled={colleague.fatigueRisk}
-                    onClick={() => setSelectedTarget(colleague.name)}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
-                      selectedTarget === colleague.name
-                        ? 'border-[#FF4D2D] bg-[#FF4D2D]/10 text-white'
-                        : colleague.fatigueRisk
-                        ? 'border-white/5 bg-white/5 opacity-50 cursor-not-allowed text-slate-500'
-                        : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
-                    }`}
-                  >
-                    <div>
-                      <div className="font-bold text-xs">{colleague.name}</div>
-                      <div className="text-[10px] font-mono text-slate-400">{colleague.role}</div>
-                    </div>
-                    {colleague.fatigueRisk ? (
-                      <span className="text-[9px] font-mono text-rose-400 bg-rose-950/80 px-2 py-0.5 rounded">
-                        Fatigue Risk
-                      </span>
-                    ) : (
-                      <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3" />
-                        <span>Skill Match</span>
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Proposed Shift */}
-            <div>
-              <label className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
-                Proposed Shift Trade
+              <label className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
+                {t.availableColleagues || 'Select Qualified Colleague'}
               </label>
               <select
-                value={proposedShift}
-                onChange={(e) => setProposedShift(e.target.value)}
-                className="w-full bg-[#222222] border border-white/10 rounded-xl p-2.5 text-white text-xs focus:outline-none"
+                value={selectedTarget}
+                onChange={(e) => setSelectedTarget(e.target.value)}
+                className="w-full p-2.5 bg-white/5 border border-white/10 rounded-2xl text-white font-mono focus:outline-hidden focus:border-[#D9381E]"
               >
-                <option value="Evening Rigging (15:00 - 23:30) • Oct 29">Evening Shift (15:00 - 23:30) • Oct 29</option>
-                <option value="Morning Academic Prep (06:00 - 14:30) • Oct 30">Morning Shift (06:00 - 14:30) • Oct 30</option>
-                <option value="Overnight Sanitization (22:00 - 06:00) • Oct 30">Night Shift (22:00 - 06:00) • Oct 30</option>
+                {eligibleColleagues.map((colleague) => (
+                  <option
+                    key={colleague.id}
+                    value={colleague.name}
+                    disabled={colleague.fatigueRisk}
+                    className="bg-[#1A1A1A]"
+                  >
+                    {colleague.name} ({colleague.role}) {colleague.fatigueRisk ? '— FATIGUE LOCKED' : '— AVAILABLE'}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Reason */}
             <div>
-              <label className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
-                Reason for Swap Request
+              <label className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
+                Target Shift & Date
               </label>
               <input
                 type="text"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g. Doctor appointment in forenoon..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-2.5 text-white placeholder-slate-500 focus:outline-none"
+                value={proposedShift}
+                onChange={(e) => setProposedShift(e.target.value)}
+                className="w-full p-2.5 bg-white/5 border border-white/10 rounded-2xl text-white font-mono focus:outline-hidden focus:border-[#D9381E]"
               />
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-2.5 bg-white/10 text-white font-medium rounded-full hover:bg-white/15"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!reason.trim()}
-                className="flex-1 py-2.5 bg-[#FF4D2D] text-white font-bold rounded-full disabled:opacity-40 hover:bg-[#E84324]"
-              >
-                Send Request
-              </button>
+            <div>
+              <label className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">
+                Reason for Swap
+              </label>
+              <textarea
+                rows={2}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Family emergency / medical appointment turnaround..."
+                className="w-full p-2.5 bg-white/5 border border-white/10 rounded-2xl text-white font-mono placeholder:text-slate-600 focus:outline-hidden focus:border-[#D9381E]"
+              />
             </div>
+
+            <div className="p-3 bg-white/5 rounded-2xl border border-white/5 flex items-center gap-2 text-[11px] text-slate-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Turnaround check guarantees 12h rest before subsequent shift.</span>
+            </div>
+
+            <button
+              type="submit"
+              className="mt-2 w-full py-2.5 rounded-full bg-[#D9381E] hover:bg-[#B52810] text-white font-mono font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              <span>{t.requestSwapBtn || 'Submit Shift Swap'}</span>
+            </button>
           </form>
         )}
       </div>

@@ -2,20 +2,27 @@ import React, { useState } from 'react';
 
 // Folded Architectural Line Chart inspired by clean exhibition infographic (Reference Image 1)
 export default function FoldedTrendChart({
-  title = "Shift Overtime & Fatigue Trajectory",
-  subtitle = "Hours logged across work cycles",
-  data = [
-    { label: "Mon", value: 7.8, unit: "h", status: "normal" },
-    { label: "Tue", value: 8.0, unit: "h", status: "normal" },
-    { label: "Wed", value: 6.5, unit: "h", status: "normal" },
-    { label: "Thu", value: 9.8, unit: "h", status: "overtime" },
-    { label: "Fri", value: 11.2, unit: "h", status: "fatigue" },
-    { label: "Sat", value: 8.5, unit: "h", status: "overtime" },
-    { label: "Today", value: 8.2, unit: "h", status: "normal" }
-  ],
-  threshold = 8.0
+  title,
+  subtitle,
+  data,
+  threshold = 8.0,
+  t = {}
 }) {
-  const [activePoint, setActivePoint] = useState(data[data.length - 1]);
+  const chartTitle = title || t.weeklyTrajectoryTitle || "Weekly Shift Duration Trajectory";
+  const chartSubtitle = subtitle || t.weeklyTrajectorySubtitle || "7-day shift patterns vs 8h standard cap";
+
+  const defaultData = [
+    { label: t.mon || "Mon", value: 7.8, unit: "h", status: "normal" },
+    { label: t.tue || "Tue", value: 8.0, unit: "h", status: "normal" },
+    { label: t.wed || "Wed", value: 6.5, unit: "h", status: "normal" },
+    { label: t.thu || "Thu", value: 9.8, unit: "h", status: "overtime" },
+    { label: t.fri || "Fri", value: 11.2, unit: "h", status: "fatigue" },
+    { label: t.sat || "Sat", value: 8.5, unit: "h", status: "overtime" },
+    { label: t.today || "Today", value: 8.2, unit: "h", status: "normal" }
+  ];
+
+  const chartData = data || defaultData;
+  const [activePoint, setActivePoint] = useState(chartData[chartData.length - 1]);
 
   // Chart dimensions
   const width = 580;
@@ -27,8 +34,8 @@ export default function FoldedTrendChart({
   const maxVal = 13.0;
 
   // Calculate coordinates
-  const points = data.map((d, i) => {
-    const x = paddingX + (i / (data.length - 1)) * (width - 2 * paddingX);
+  const points = chartData.map((d, i) => {
+    const x = paddingX + (i / (chartData.length - 1)) * (width - 2 * paddingX);
     const normalizedY = (d.value - minVal) / (maxVal - minVal);
     const y = height - paddingY - normalizedY * (height - 2 * paddingY);
     return { ...d, x, y };
@@ -49,119 +56,120 @@ export default function FoldedTrendChart({
       {/* Editorial Header */}
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-black/[0.06] pb-3">
         <div className="flex items-baseline gap-2.5">
-          <h3 className="text-base sm:text-lg font-black tracking-tight text-black">{title}</h3>
-          <span className="text-xs text-slate-400 font-mono hidden sm:inline">{subtitle}</span>
+          <h3 className="text-base sm:text-lg font-black tracking-tight text-black">{chartTitle}</h3>
+          <span className="text-xs text-slate-400 font-mono hidden sm:inline">{chartSubtitle}</span>
         </div>
 
         <div className="flex items-center gap-3 text-[11px] font-mono">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-0.5 bg-black"></span>
-            <span>Standard (8h)</span>
+            <span>8h {t.withinStandardCap || 'Cap'}</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#FF4D2D]"></span>
-            <span>Fatigue (&gt;10h)</span>
+          <span className="flex items-center gap-1.5 text-[#D9381E] font-medium">
+            <span className="w-2 h-0.5 bg-[#D9381E]"></span>
+            <span>{t.overtime15x || 'Overtime (1.5x)'}</span>
           </span>
         </div>
       </div>
 
-      {/* SVG Canvas */}
-      <div className="w-full overflow-x-auto py-2">
+      {/* Interactive SVG Display Canvas */}
+      <div className="relative w-full overflow-hidden">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-auto min-w-[460px] overflow-visible"
+          className="w-full h-44 sm:h-52 overflow-visible"
         >
-          {/* Subtle horizontal grid lines */}
-          <line
-            x1={paddingX}
-            y1={height - paddingY - ((8.0 - minVal) / (maxVal - minVal)) * (height - 2 * paddingY)}
-            x2={width - paddingX}
-            y2={height - paddingY - ((8.0 - minVal) / (maxVal - minVal)) * (height - 2 * paddingY)}
-            stroke="#000000"
-            strokeWidth="0.75"
-            strokeDasharray="3 3"
-            strokeOpacity="0.25"
-          />
-          <text
-            x={width - paddingX + 6}
-            y={height - paddingY - ((8.0 - minVal) / (maxVal - minVal)) * (height - 2 * paddingY) + 3}
-            className="text-[9px] font-mono fill-slate-400"
-          >
-            8h Max Standard
-          </text>
+          <defs>
+            <linearGradient id="terracottaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#D9381E" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#D9381E" stopOpacity="0.0" />
+            </linearGradient>
 
-          {/* Folded Shadow Ribbon (Geometric dark fold underneath line) */}
+            <filter id="shadowFilter" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="4" stdDeviation="3" floodOpacity="0.12" />
+            </filter>
+          </defs>
+
+          {/* Horizontal Grid Guides */}
+          {[6, 8, 10, 12].map((g) => {
+            const normalizedY = (g - minVal) / (maxVal - minVal);
+            const y = height - paddingY - normalizedY * (height - 2 * paddingY);
+            const isThreshold = g === threshold;
+            return (
+              <g key={g}>
+                <line
+                  x1={paddingX}
+                  y1={y}
+                  x2={width - paddingX}
+                  y2={y}
+                  stroke={isThreshold ? "#111111" : "#E5E5EA"}
+                  strokeWidth={isThreshold ? "1.5" : "1"}
+                  strokeDasharray={isThreshold ? "3 3" : "none"}
+                />
+                <text
+                  x={paddingX - 8}
+                  y={y + 3}
+                  textAnchor="end"
+                  className="text-[9px] font-mono fill-slate-400"
+                >
+                  {g}h
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Folded Ribbon Shadow Line */}
           <path
-            d={`${pathD} L ${points[points.length - 1].x} ${points[points.length - 1].y + 5} L ${ribbonD.replace('M', 'L')} Z`}
-            fill="#000000"
-            fillOpacity="0.08"
+            d={ribbonD}
+            fill="none"
+            stroke="#111111"
+            strokeWidth="4"
+            opacity="0.12"
           />
 
-          {/* Main Architectural Black Polyline */}
+          {/* Area Fill Under Ribbon */}
+          <path
+            d={`${pathD} L ${points[points.length - 1].x} ${height - paddingY} L ${points[0].x} ${height - paddingY} Z`}
+            fill="url(#terracottaGradient)"
+          />
+
+          {/* Main Trajectory Line */}
           <path
             d={pathD}
             fill="none"
-            stroke="#111111"
-            strokeWidth="2.5"
+            stroke="#D9381E"
+            strokeWidth="3.5"
             strokeLinecap="round"
             strokeLinejoin="round"
+            filter="url(#shadowFilter)"
           />
 
-          {/* Folded Accent Highlights */}
+          {/* Data Points / Fold Hinges */}
           {points.map((p, idx) => {
             const isSelected = activePoint && activePoint.label === p.label;
-            const isHigh = p.value >= 10.0;
-            const isOvertime = p.value > 8.0;
-
+            const isOt = p.value > 8.0;
             return (
               <g
                 key={idx}
-                className="cursor-pointer transition-all"
+                className="cursor-pointer transition-transform duration-200"
                 onClick={() => setActivePoint(p)}
               >
-                {/* Vertical subtle guideline */}
-                <line
-                  x1={p.x}
-                  y1={p.y}
-                  x2={p.x}
-                  y2={height - 20}
-                  stroke="#000000"
-                  strokeWidth="0.5"
-                  strokeDasharray="2 2"
-                  strokeOpacity={isSelected ? 0.4 : 0.1}
-                />
-
-                {/* Bold Number Label (Inspired directly by '131 min', '152 min' in reference image) */}
-                <text
-                  x={p.x}
-                  y={p.y - 12}
-                  textAnchor="middle"
-                  className={`font-mono text-[11px] font-extrabold ${
-                    isHigh
-                      ? 'fill-[#FF4D2D]'
-                      : isSelected
-                      ? 'fill-black'
-                      : 'fill-slate-700'
-                  }`}
-                >
-                  {p.value}{p.unit}
-                </text>
-
-                {/* Crisp Point Node Dot */}
+                {/* Connecting Fold Pin */}
                 <circle
                   cx={p.x}
                   cy={p.y}
-                  r={isSelected ? 4.5 : 3.5}
-                  fill={isHigh ? "#FF4D2D" : "#111111"}
+                  r={isSelected ? "7" : "5"}
+                  fill={isOt ? "#D9381E" : "#111111"}
+                  stroke="#FFFFFF"
+                  strokeWidth="2.5"
                 />
 
-                {/* X-Axis Day / Time Label */}
+                {/* Day Labels at bottom */}
                 <text
                   x={p.x}
-                  y={height - 5}
+                  y={height - 8}
                   textAnchor="middle"
                   className={`text-[10px] font-mono ${
-                    isSelected ? 'font-black fill-black' : 'fill-slate-400'
+                    isSelected ? "fill-black font-bold" : "fill-slate-400"
                   }`}
                 >
                   {p.label}
@@ -170,39 +178,30 @@ export default function FoldedTrendChart({
             );
           })}
         </svg>
+
+        {/* Hover / Selected Callout Card */}
+        {activePoint && (
+          <div className="flex items-center justify-between mt-1 px-4 py-2.5 rounded-2xl bg-[#EDEDEA] border border-black/[0.06] text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${activePoint.value > 8 ? 'bg-[#D9381E]' : 'bg-emerald-500'}`}></span>
+              <span className="font-bold text-black">{activePoint.label}:</span>
+              <span className="font-ndot text-sm text-black">{activePoint.value}h</span>
+            </div>
+
+            <div className="text-[11px] text-slate-600">
+              {activePoint.value > 8 ? (
+                <span className="text-[#D9381E] font-bold">
+                  +{(activePoint.value - 8).toFixed(1)}h {t.overtime15x || 'Overtime'}
+                </span>
+              ) : (
+                <span className="text-emerald-700 font-medium">
+                  {t.withinStandardCap || 'Standard Safe Shift'}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Selected Point Context Footer */}
-      {activePoint && (
-        <div className="pt-2 border-t border-black/[0.04] flex items-center justify-between text-xs font-mono">
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                activePoint.value >= 10.0
-                  ? 'bg-[#FF4D2D]'
-                  : activePoint.value > 8.0
-                  ? 'bg-amber-500'
-                  : 'bg-emerald-500'
-              }`}
-            ></span>
-            <span className="font-bold text-black">{activePoint.label}</span>
-            <span className="text-slate-400">•</span>
-            <span className="text-slate-600">
-              {activePoint.value} Total Hours Logged
-            </span>
-          </div>
-
-          <div className="text-[11px] text-slate-500">
-            {activePoint.value > 8.0 ? (
-              <span className="text-[#FF4D2D] font-bold">
-                +{(activePoint.value - 8.0).toFixed(1)}h Overtime Accrued (1.5x)
-              </span>
-            ) : (
-              <span className="text-emerald-700 font-medium">Standard Safe Shift</span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

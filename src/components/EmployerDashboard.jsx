@@ -20,8 +20,6 @@ export default function EmployerDashboard({
 
   // Live DB records
   const db = dbState || fairShiftDB.getState();
-  const discrepancies = db.discrepancies || [];
-  const shiftSwaps = db.shiftSwaps || [];
 
   const handleGrantRest = (workerId) => {
     setWorkersList((prev) =>
@@ -48,18 +46,6 @@ export default function EmployerDashboard({
     }, 2000);
   };
 
-  const handleApproveSwap = (swapId) => {
-    fairShiftDB.approveShiftSwap(swapId, 'Murugan Sundaram (Supervisor)');
-  };
-
-  const handleRejectSwap = (swapId) => {
-    fairShiftDB.rejectShiftSwap(swapId, 'Fatigue turnaround conflict with subsequent shift.', 'Murugan Sundaram (Supervisor)');
-  };
-
-  const handleResolveDiscrepancy = (discId) => {
-    fairShiftDB.resolveDiscrepancy(discId, 'Gate sensor verified. Overtime adjusted.', 11.75, 'Deepa (HR Officer)');
-  };
-
   const handleExportData = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -79,43 +65,50 @@ export default function EmployerDashboard({
   const totalOvertimeLogged = workersList.reduce((acc, w) => acc + w.ot, 0).toFixed(1);
   const highFatigueWorkers = workersList.filter((w) => w.fatigue === 'high');
 
-  // Sentiment Breakdown in CMF Nothing Style (Replacing the black pie chart)
+  // Localized Sentiment Breakdown in CMF Nothing Style (Replacing the black pie chart)
   const sentimentVectors = [
-    { label: "Fair Pay & Overtime", score: 94, status: "Verified", count: 18, color: "#D9381E" },
-    { label: "Safety Confidence", score: 91, status: "Active", count: 14, color: "#111111" },
-    { label: "Manager Respect", score: 88, status: "Good", count: 12, color: "#111111" },
-    { label: "Equipment Quality", score: 82, status: "Adequate", count: 8, color: "#767676" },
-    { label: "Fatigue Strain", score: 24, status: "Alert (>10h)", count: 6, color: "#D9381E" },
-    { label: "Hydration & Heat", score: 79, status: "Review", count: 5, color: "#767676" }
+    { label: t.sentimentFairPay || "Fair Pay & Overtime", score: 94, status: t.verifiedStatus || "Verified", count: 18, color: "#D9381E" },
+    { label: t.sentimentSafety || "Safety Confidence", score: 91, status: t.activeStatus || "Active", count: 14, color: "#111111" },
+    { label: t.sentimentManager || "Manager Respect", score: 88, status: t.goodStatus || "Good", count: 12, color: "#111111" },
+    { label: t.sentimentEquipment || "Equipment Quality", score: 82, status: t.adequateStatus || "Adequate", count: 8, color: "#767676" },
+    { label: t.sentimentFatigue || "Fatigue Strain", score: 24, status: t.alertStatus || "Alert (>10h)", count: 6, color: "#D9381E" },
+    { label: t.sentimentHydration || "Hydration & Heat", score: 79, status: t.reviewStatus || "Review", count: 5, color: "#767676" }
   ];
 
+  const statusLabels = {
+    submitted: t.statusSubmitted || 'Submitted',
+    under_investigation: t.statusInvestigating || 'Under Investigation',
+    resolved: t.statusResolved || 'Resolved'
+  };
+
   return (
-    <div className="w-full max-w-6xl mx-auto py-8 px-4 sm:px-8 flex flex-col gap-6 text-[#111111]">
+    <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-8 flex flex-col gap-6 text-[#111111]">
       {/* Top Header Card in CMF Nothing Style */}
       <div className="bg-white p-6 sm:p-8 rounded-4xl border border-black/[0.06] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#D9381E]"></span>
             <span className="text-[10px] font-ndot uppercase tracking-widest text-slate-400">
-              OPERATIONS CONSOLE • ROLE: {currentRole.toUpperCase()}
+              {t.opsConsole} • {t.role} {currentRole.toUpperCase()}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-black tracking-tight mt-1">
             {sectorConfig.siteName}
           </h1>
           <p className="text-xs text-slate-500 font-mono mt-0.5">
-            {sectorConfig.location} • Real-Time Workforce Compliance
+            {sectorConfig.location} • {t.employerDashboardSubtitle}
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <button
+            type="button"
             onClick={handleExportData}
-            title="Download audit compliance report"
+            title={t.exportAuditJson}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-black/[0.04] hover:bg-black/[0.08] text-black text-xs font-mono font-bold border border-black/[0.06] transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>EXPORT AUDIT</span>
+            <span>{t.exportAuditJson}</span>
           </button>
 
           <AudioPlayerButton
@@ -130,20 +123,20 @@ export default function EmployerDashboard({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-4xl border border-black/[0.06] flex flex-col justify-between min-h-[150px] shadow-2xs">
           <div className="text-[10px] font-ndot uppercase tracking-widest text-slate-400">
-            ACTIVE ON-SITE
+            {t.metricActiveWorkers}
           </div>
           <div className="font-ndot text-4xl sm:text-5xl text-black my-1">
             {workersList.length * 24}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span>96.8% shift rate</span>
+            <span>96.8% shift compliance</span>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-4xl border border-black/[0.06] flex flex-col justify-between min-h-[150px] shadow-2xs">
           <div className="text-[10px] font-ndot uppercase tracking-widest text-slate-400">
-            OVERTIME HOURS
+            {t.metricShiftHours}
           </div>
           <div className="font-ndot text-4xl sm:text-5xl text-black my-1">
             {totalOvertimeLogged}h
@@ -156,20 +149,20 @@ export default function EmployerDashboard({
 
         <div className="bg-[#D9381E] text-white p-6 rounded-4xl flex flex-col justify-between min-h-[150px] shadow-xs">
           <div className="text-[10px] font-ndot uppercase tracking-widest text-white/80">
-            FATIGUE ALERTS
+            {t.metricFatigueFlags}
           </div>
           <div className="font-ndot text-4xl sm:text-5xl text-white my-1">
             {highFatigueWorkers.length}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-white/90 font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-            <span>Mandatory Rest</span>
+            <span>{t.actionRest}</span>
           </div>
         </div>
 
         <div className="bg-[#111111] text-white p-6 rounded-4xl flex flex-col justify-between min-h-[150px] shadow-xs">
           <div className="text-[10px] font-ndot uppercase tracking-widest text-slate-400">
-            OPEN TICKETS
+            {t.metricOpenGrievances}
           </div>
           <div className="font-ndot text-4xl sm:text-5xl text-white my-1">
             {grievances.filter((g) => g.status !== 'resolved').length}
@@ -183,16 +176,17 @@ export default function EmployerDashboard({
 
       {/* GRAPH: Architectural Folded Ribbon Trend Chart */}
       <FoldedTrendChart
-        title="Workforce Shift Hours & Overtime Surge Trajectory"
-        subtitle="Daily aggregation showing threshold crossings"
+        title={t.weeklyTrajectoryTitle}
+        subtitle={t.weeklyTrajectorySubtitle}
+        t={t}
         data={[
-          { label: "Mon", value: 7.8, unit: "h", status: "normal" },
-          { label: "Tue", value: 8.2, unit: "h", status: "normal" },
-          { label: "Wed", value: 6.9, unit: "h", status: "normal" },
-          { label: "Thu", value: 9.8, unit: "h", status: "overtime" },
-          { label: "Fri", value: 11.2, unit: "h", status: "fatigue" },
-          { label: "Sat", value: 8.5, unit: "h", status: "overtime" },
-          { label: "Today", value: 10.4, unit: "h", status: "fatigue" }
+          { label: t.mon || "Mon", value: 7.8, unit: "h", status: "normal" },
+          { label: t.tue || "Tue", value: 8.2, unit: "h", status: "normal" },
+          { label: t.wed || "Wed", value: 6.9, unit: "h", status: "normal" },
+          { label: t.thu || "Thu", value: 9.8, unit: "h", status: "overtime" },
+          { label: t.fri || "Fri", value: 11.2, unit: "h", status: "fatigue" },
+          { label: t.sat || "Sat", value: 8.5, unit: "h", status: "overtime" },
+          { label: t.today || "Today", value: 10.4, unit: "h", status: "fatigue" }
         ]}
       />
 
@@ -206,34 +200,37 @@ export default function EmployerDashboard({
                 <div className="text-[10px] font-ndot uppercase tracking-widest text-slate-400">
                   FATIGUE GUARDIAN
                 </div>
-                <h3 className="font-bold text-base text-black">{t.fatigueAlertTitle}</h3>
+                <h3 className="font-bold text-base text-black">{t.rosterTitle}</h3>
               </div>
 
               {/* Minimal filter pills */}
               <div className="flex items-center bg-black/[0.04] p-0.5 rounded-full text-xs font-mono">
                 <button
+                  type="button"
                   onClick={() => setActiveFilter('all')}
                   className={`px-3 py-1 rounded-full font-medium transition-all ${
                     activeFilter === 'all' ? 'bg-black text-white font-bold' : 'text-slate-600'
                   }`}
                 >
-                  All ({workersList.length})
+                  {t.filterAll} ({workersList.length})
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveFilter('high_fatigue')}
                   className={`px-3 py-1 rounded-full font-medium transition-all ${
                     activeFilter === 'high_fatigue' ? 'bg-[#D9381E] text-white font-bold' : 'text-slate-600'
                   }`}
                 >
-                  Fatigue ({highFatigueWorkers.length})
+                  {t.filterFatigue} ({highFatigueWorkers.length})
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveFilter('overtime')}
                   className={`px-3 py-1 rounded-full font-medium transition-all ${
                     activeFilter === 'overtime' ? 'bg-black text-white font-bold' : 'text-slate-600'
                   }`}
                 >
-                  Overtime
+                  {t.filterOvertime}
                 </button>
               </div>
             </div>
@@ -243,11 +240,11 @@ export default function EmployerDashboard({
               <table className="w-full text-left text-xs font-mono">
                 <thead>
                   <tr className="border-b border-black/[0.06] text-slate-400 text-[10px] uppercase tracking-wider">
-                    <th className="py-2.5 px-2">Worker</th>
-                    <th className="py-2.5 px-2">Check-In</th>
-                    <th className="py-2.5 px-2">Duration</th>
-                    <th className="py-2.5 px-2">Status</th>
-                    <th className="py-2.5 px-2 text-right">Action</th>
+                    <th className="py-2.5 px-2">{t.colWorker}</th>
+                    <th className="py-2.5 px-2">{t.colCheckIn}</th>
+                    <th className="py-2.5 px-2">{t.colHours}</th>
+                    <th className="py-2.5 px-2">{t.colStatus}</th>
+                    <th className="py-2.5 px-2 text-right">{t.colActions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/[0.04]">
@@ -278,17 +275,17 @@ export default function EmployerDashboard({
                         {worker.fatigue === 'rest_granted' ? (
                           <span className="text-emerald-700 text-[11px] font-semibold flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>Rest Granted</span>
+                            <span>{t.actionRestGranted}</span>
                           </span>
                         ) : worker.fatigue === 'high' ? (
                           <span className="text-[#D9381E] text-[11px] font-bold flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#D9381E]"></span>
-                            <span>Fatigued (&gt;10h)</span>
+                            <span>{t.alertStatus}</span>
                           </span>
                         ) : (
                           <span className="text-slate-500 text-[11px] flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                            <span>Normal</span>
+                            <span>{t.withinCap}</span>
                           </span>
                         )}
                       </td>
@@ -297,16 +294,18 @@ export default function EmployerDashboard({
                         {worker.fatigue === 'high' ? (
                           <div className="flex items-center justify-end gap-1.5">
                             <button
+                              type="button"
                               onClick={() => handleGrantRest(worker.id)}
                               className="px-3 py-1 bg-black hover:bg-slate-800 text-white rounded-full text-[11px] font-bold"
                             >
-                              Rest
+                              {t.actionRest}
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleReassign(worker.id)}
                               className="px-3 py-1 bg-black/[0.04] hover:bg-black/[0.08] text-black rounded-full text-[11px] font-medium"
                             >
-                              Relieve
+                              {t.actionReassign}
                             </button>
                           </div>
                         ) : (
@@ -329,7 +328,7 @@ export default function EmployerDashboard({
                 <div className="text-[10px] font-ndot uppercase tracking-widest text-slate-400">
                   INCIDENT QUEUE
                 </div>
-                <h3 className="font-bold text-base text-black">{t.grievanceFeedTitle}</h3>
+                <h3 className="font-bold text-base text-black">{t.incidentResolutionQueue}</h3>
               </div>
               <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-black/[0.05]">
                 {grievances.length} Tickets
@@ -362,7 +361,7 @@ export default function EmployerDashboard({
                             : 'bg-[#D9381E]'
                         }`}
                       ></span>
-                      <span className="capitalize">{item.status.replace('_', ' ')}</span>
+                      <span>{statusLabels[item.status] || item.status}</span>
                     </div>
                   </div>
 
@@ -372,10 +371,11 @@ export default function EmployerDashboard({
                     <div className="flex items-center justify-between bg-black/[0.03] px-3 py-1.5 rounded-full text-[11px]">
                       <span>Voice Note ({item.audioSeconds}s)</span>
                       <button
+                        type="button"
                         onClick={() => handlePlayVoice(item)}
                         className="font-bold text-black hover:text-[#D9381E]"
                       >
-                        {playingVoiceId === item.id ? 'Playing...' : 'Play'}
+                        {playingVoiceId === item.id ? 'Playing...' : (t.listenAudio || 'Play')}
                       </button>
                     </div>
                   )}
@@ -386,30 +386,32 @@ export default function EmployerDashboard({
                     <div className="flex items-center gap-1.5">
                       {item.status === 'submitted' && (
                         <button
+                          type="button"
                           onClick={() =>
                             onUpdateGrievanceStatus(item.id, 'under_investigation', 'Safety investigator assigned to zone.')
                           }
                           className="px-3 py-1 bg-black/[0.05] hover:bg-black/[0.1] text-black font-bold rounded-full text-[11px]"
                         >
-                          Investigate
+                          {t.btnInvestigate}
                         </button>
                       )}
 
                       {item.status !== 'resolved' && (
                         <button
+                          type="button"
                           onClick={() =>
                             onUpdateGrievanceStatus(item.id, 'resolved', 'Corrective action taken & safety certified.')
                           }
                           className="px-3 py-1 bg-black hover:bg-slate-800 text-white font-bold rounded-full text-[11px]"
                         >
-                          Resolve & Close
+                          {t.btnResolve}
                         </button>
                       )}
 
                       {item.status === 'resolved' && (
                         <span className="text-emerald-700 text-[11px] font-bold flex items-center gap-1">
                           <Check className="w-3 h-3" />
-                          <span>Certified Closed</span>
+                          <span>{t.statusResolved}</span>
                         </span>
                       )}
                     </div>
@@ -428,7 +430,7 @@ export default function EmployerDashboard({
             <div className="text-[10px] font-ndot uppercase tracking-widest text-[#D9381E]">
               WORKFORCE WELLBEING & ATTRITION RISK
             </div>
-            <h3 className="font-bold text-lg text-black mt-0.5">Sentiment Metrics & Retention Matrix</h3>
+            <h3 className="font-bold text-lg text-black mt-0.5">{t.sentimentMatrixTitle}</h3>
             <p className="text-xs text-slate-500 font-mono mt-0.5">
               Continuous monitoring across 6 key labor factors (UN SDG 8 Aligned)
             </p>
