@@ -1,15 +1,11 @@
 import React from 'react';
-import { Bell, Mic, Wifi, WifiOff, RefreshCw, LogOut, User } from 'lucide-react';
+import { Bell, Mic, Wifi, WifiOff, RefreshCw, LogOut, ShieldCheck, User } from 'lucide-react';
 
 export default function Navbar({
-  currentView,
-  setCurrentView,
   selectedSector,
   setSelectedSector,
   currentLang,
   setCurrentLang,
-  currentRole,
-  setCurrentRole,
   onOpenVoiceModal,
   onOpenNotifModal,
   unreadNotifsCount = 0,
@@ -18,18 +14,11 @@ export default function Navbar({
   offlineQueueCount = 0,
   onSyncOffline,
   t,
-  sectorData,
-  pendingGrievancesCount,
-  fatigueAlertsCount,
   currentUser,
   onSignOut
 }) {
-  const roleDisplayNames = {
-    worker: t.worker || 'Worker',
-    supervisor: t.supervisor || 'Supervisor',
-    hr: t.hr || 'HR Officer',
-    admin: t.admin || 'Admin'
-  };
+  const isWorker = currentUser?.role === 'worker';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'hr';
 
   return (
     <header className="sticky top-0 z-40 bg-[#ECECE9]/95 backdrop-blur-md border-b border-black/[0.08] text-[#111111]">
@@ -105,19 +94,16 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Main Navigation Bar (Fluid across Phone & Laptop) */}
+      {/* Main Navigation Bar (Clean CMF Nothing Style, Zero Dual Toggles) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
-        {/* Brand & Sector Tag */}
+        {/* Left: Brand & Sector Tag */}
         <div className="flex items-center gap-3">
-          <div
-            className="flex items-center gap-2 cursor-pointer group"
-            onClick={() => setCurrentView('worker')}
-          >
-            <span className="w-3 h-3 rounded-full bg-[#D9381E] group-hover:scale-110 transition-transform"></span>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-[#D9381E]"></span>
             <span className="font-ndot text-xl tracking-tight text-black">{t.appName}</span>
           </div>
 
-          {/* Sector Pill */}
+          {/* Sector Pill (Construction vs Campus) */}
           <div className="flex items-center bg-black/[0.04] p-0.5 rounded-full border border-black/[0.06] text-xs font-mono">
             <button
               type="button"
@@ -144,62 +130,23 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Center: Dual Interface Switcher (Worker vs Employer) */}
-        <div className="flex items-center bg-black/[0.06] p-1 rounded-full border border-black/[0.08]">
-          <button
-            type="button"
-            onClick={() => setCurrentView('worker')}
-            className={`px-4 sm:px-5 py-1.5 text-xs font-semibold rounded-full transition-all ${
-              currentView === 'worker'
-                ? 'bg-black text-white shadow-xs font-bold'
-                : 'text-slate-600 hover:text-black'
-            }`}
-          >
-            {t.workerView}
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentView('employer')}
-            className={`px-4 sm:px-5 py-1.5 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 ${
-              currentView === 'employer'
-                ? 'bg-black text-white shadow-xs font-bold'
-                : 'text-slate-600 hover:text-black'
-            }`}
-          >
-            <span>{t.employerView}</span>
-            {pendingGrievancesCount > 0 && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#D9381E] animate-pulse"></span>
-            )}
-          </button>
+        {/* Center: Strict Role Indicator Pill (No Toggle - Locked to Authenticated Role) */}
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-black/[0.04] rounded-full border border-black/[0.06] font-mono text-xs">
+          <span className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-[#D9381E]' : 'bg-emerald-500 animate-pulse'}`}></span>
+          <span className="font-bold text-black font-sans">{currentUser?.name}</span>
+          <span className="text-[10px] font-mono px-2 py-0.5 bg-black text-white rounded-full uppercase tracking-wider font-bold">
+            {isAdmin ? (t.employerView || 'ADMIN') : (t.workerView || 'WORKER')}
+          </span>
         </div>
 
-        {/* Right: Role, Voice, Notifications & Sign Out */}
+        {/* Right: Voice, Notifications & Sign Out */}
         <div className="flex items-center gap-2">
-          {/* Role Pill Switcher */}
-          <div className="hidden xl:flex items-center bg-black/[0.04] p-0.5 rounded-full border border-black/[0.06] text-xs font-mono">
-            <span className="px-2 text-[10px] text-slate-400">{t.role}</span>
-            {['worker', 'supervisor', 'hr', 'admin'].map((role) => (
-              <button
-                type="button"
-                key={role}
-                onClick={() => setCurrentRole(role)}
-                className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-semibold transition-all ${
-                  currentRole === role
-                    ? 'bg-black text-white font-bold'
-                    : 'text-slate-500 hover:text-black'
-                }`}
-              >
-                {roleDisplayNames[role] || role}
-              </button>
-            ))}
-          </div>
-
           {/* Multilingual Voice Assistant Button */}
           <button
             type="button"
             onClick={onOpenVoiceModal}
             title={t.voiceModalTitle}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D9381E] hover:bg-[#B52810] text-white text-xs font-bold font-mono transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#D9381E] hover:bg-[#B52810] text-white text-xs font-bold font-mono transition-colors shadow-xs"
           >
             <Mic className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{t.voice}</span>
@@ -227,7 +174,7 @@ export default function Navbar({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/[0.05] hover:bg-black/[0.1] text-black font-mono text-xs font-bold transition-colors border border-black/[0.06]"
             >
               <LogOut className="w-3.5 h-3.5 text-slate-500" />
-              <span className="hidden md:inline">{t.signOut}</span>
+              <span className="hidden sm:inline">{t.signOut}</span>
             </button>
           )}
         </div>

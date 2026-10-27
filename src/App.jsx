@@ -20,16 +20,10 @@ export default function App() {
     }
   });
 
-  const [currentView, setCurrentView] = useState(() => {
-    return currentUser?.view || 'worker';
-  });
   const [selectedSector, setSelectedSector] = useState(() => {
     return currentUser?.sector || 'construction';
   });
   const [currentLang, setCurrentLang] = useState('en'); // 'en' | 'hi' | 'ta'
-  const [currentRole, setCurrentRole] = useState(() => {
-    return currentUser?.role || 'worker';
-  });
 
   // DB State synchronization
   const [dbState, setDbState] = useState(() => fairShiftDB.getState());
@@ -55,11 +49,16 @@ export default function App() {
   const sectorData = sectorConfigs[selectedSector] || sectorConfigs.construction;
   const t = translations[currentLang] || translations.en;
 
+  // Strict Role-Based View Determination:
+  // When logged in as worker -> ONLY 'worker' interface is shown.
+  // When logged in as admin/supervisor/hr -> ONLY 'employer' interface is shown.
+  const currentView = currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || currentUser?.role === 'hr'
+    ? 'employer'
+    : 'worker';
+
   // Handle successful login
   const handleLoginSuccess = (userPayload) => {
     setCurrentUser(userPayload);
-    setCurrentRole(userPayload.role || 'worker');
-    setCurrentView(userPayload.view || 'worker');
     if (userPayload.sector) setSelectedSector(userPayload.sector);
     try {
       localStorage.setItem('fairshift_auth_user', JSON.stringify(userPayload));
@@ -90,7 +89,7 @@ export default function App() {
   // Active shift timer
   useEffect(() => {
     let interval = null;
-    if (isClockedIn && currentUser) {
+    if (isClockedIn && currentUser && currentView === 'worker') {
       interval = setInterval(() => {
         setShiftSeconds((prev) => prev + 1);
       }, 1000);
@@ -98,7 +97,7 @@ export default function App() {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isClockedIn, currentUser]);
+  }, [isClockedIn, currentUser, currentView]);
 
   // Handle adding new grievance from worker view
   const handleAddGrievance = (newGrievance) => {
@@ -117,7 +116,7 @@ export default function App() {
 
   // Handle updating grievance status (from employer dashboard)
   const handleUpdateGrievanceStatus = (id, newStatus, actionLog) => {
-    fairShiftDB.updateCaseStatus(id, newStatus, actionLog, 'Safety Lead Murugan', currentRole.toUpperCase());
+    fairShiftDB.updateCaseStatus(id, newStatus, actionLog, 'Safety Lead Murugan', (currentUser?.role || 'ADMIN').toUpperCase());
     setDemoBannerMessage(`Ticket ${id} status updated to ${newStatus.replace('_', ' ').toUpperCase()}`);
     setTimeout(() => setDemoBannerMessage(''), 4000);
   };
@@ -139,7 +138,7 @@ export default function App() {
     setTimeout(() => setDemoBannerMessage(''), 4000);
   };
 
-  // 9-Step Demonstration Auto-Run Shortcut
+  // 9-Step Demonstration Auto-Run Shortcut for Admin Evaluation
   const handleRun9StepDemo = () => {
     setDemoBannerMessage('Running 9-Step End-to-End Workflow Demonstration...');
     setIsClockedIn(true);
@@ -198,16 +197,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F4F4F2] flex flex-col text-[#111111] antialiased selection:bg-[#D9381E] selection:text-white">
-      {/* Top Persistent Navigation */}
+      {/* Top Persistent Navigation (Strictly locked to logged-in user role, zero toggle) */}
       <Navbar
-        currentView={currentView}
-        setCurrentView={setCurrentView}
         selectedSector={selectedSector}
         setSelectedSector={setSelectedSector}
         currentLang={currentLang}
         setCurrentLang={setCurrentLang}
-        currentRole={currentRole}
-        setCurrentRole={setCurrentRole}
         onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
         onOpenNotifModal={() => setIsNotifOpen(true)}
         unreadNotifsCount={unreadNotifsCount}
@@ -216,9 +211,6 @@ export default function App() {
         offlineQueueCount={offlineQueueCount}
         onSyncOffline={handleSyncOffline}
         t={t}
-        sectorData={sectorData}
-        pendingGrievancesCount={pendingGrievancesCount}
-        fatigueAlertsCount={fatigueAlertsCount}
         currentUser={currentUser}
         onSignOut={handleSignOut}
       />
@@ -239,46 +231,53 @@ export default function App() {
             <span className="font-bold text-black uppercase tracking-wider">{t.evaluationToolbar}</span>
             <span>{selectedSector === 'construction' ? t.construction : t.campus}</span>
             <span>•</span>
-            <span>{currentRole.toUpperCase()}</span>
+            <span className="uppercase font-bold text-black">{currentUser.role}</span>
             <span>•</span>
             <span className="text-slate-500">{currentUser.name}</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleRun9StepDemo}
-              title="Execute full end-to-end 9-step demonstration workflow"
-              className="flex items-center gap-1.5 px-3 py-1 bg-[#D9381E] text-white hover:bg-[#B52810] text-[11px] font-bold rounded-full transition-colors shadow-xs"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>{t.autoRunDemo}</span>
-            </button>
+            {currentView === 'employer' ? (
+              <button
+                type="button"
+                onClick={handleRun9StepDemo}
+                title="Execute full end-to-end 9-step demonstration workflow"
+                className="flex items-center gap-1.5 px-3 py-1 bg-[#D9381E] text-white hover:bg-[#B52810] text-[11px] font-bold rounded-full transition-colors shadow-xs"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>{t.autoRunDemo}</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleFastForwardOvertime}
+                  title="Add 2 hours to test 1.5x Overtime & Fatigue Alerts"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-black text-white hover:bg-slate-800 text-[11px] font-semibold rounded-full transition-colors"
+                >
+                  <FastForward className="w-3 h-3 text-[#D9381E]" />
+                  <span>{t.twoHourOt}</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={handleFastForwardOvertime}
-              title="Add 2 hours to test 1.5x Overtime & Fatigue Alerts"
-              className="flex items-center gap-1 px-2.5 py-1 bg-black text-white hover:bg-slate-800 text-[11px] font-semibold rounded-full transition-colors"
-            >
-              <FastForward className="w-3 h-3 text-[#D9381E]" />
-              <span>{t.twoHourOt}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleResetShift}
-              title="Reset shift timer"
-              className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium rounded-full border border-black/[0.08] transition-colors"
-            >
-              <RotateCcw className="w-3 h-3 text-slate-400" />
-              <span>{t.reset}</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={handleResetShift}
+                  title="Reset shift timer"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium rounded-full border border-black/[0.08] transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3 text-slate-400" />
+                  <span>{t.reset}</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Main Viewport Content (Normal Spacious Desktop Layout for both Worker & Admin) */}
+      {/* Main Viewport Content:
+          Strictly locked based on logged-in role:
+          Worker only sees WorkerPortal
+          Admin only sees EmployerDashboard */}
       <main className="flex-1 flex flex-col items-center w-full">
         {currentView === 'worker' ? (
           <WorkerPortal
@@ -302,7 +301,7 @@ export default function App() {
             grievances={currentGrievances}
             onUpdateGrievanceStatus={handleUpdateGrievanceStatus}
             fatigueAlertsCount={fatigueAlertsCount}
-            currentRole={currentRole}
+            currentRole={currentUser.role}
             dbState={dbState}
           />
         )}
